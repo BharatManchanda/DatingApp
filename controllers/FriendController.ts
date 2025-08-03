@@ -14,7 +14,7 @@ class FriendController {
 
             await User.findByIdAndUpdate(req.body.receiverId, {
                 $addToSet: {
-                    friendRequests: userReq.user._id
+                    receivedRequests: userReq.user._id
                 }
             });
             res.json({
@@ -31,62 +31,75 @@ class FriendController {
 
     async acceptRequest(req: Request, res: Response) {
         try {
-            const userReq = req as AuthenticatedRequest; 
+            res.json({
+                status: true,
+                message: "Something wrong",
+            });
+            const userReq = req as AuthenticatedRequest;
+            await User.findByIdAndUpdate(userReq.user._id, {
+                $addToSet: {
+                    friends: userReq.body.receiverId
+                },
+                $pull: {
+                    receivedRequests: userReq.body.receiverId // Remove from receivedRequests
+                }
+            });
 
-            const receiverId = userReq.user._id;
-            const { senderId } = userReq.body;
+            await User.findByIdAndUpdate(userReq.body.receiverId, {
+                $addToSet: {
+                    friends: userReq.user._id
+                },
+                $pull: {
+                    sentRequests: userReq.user._id // Remove from sentRequests
+                }
+            });
 
-            const receiver = await User.findById(receiverId);
-            const sender = await User.findById(senderId);
+            let data = await User.findById(userReq.body.receiverId);
 
-            if (!receiver || !sender) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            if (!receiver.friendRequests.includes(sender._id)) {
-                return res.status(400).json({ message: "No friend request found." });
-            }
-
-            receiver.friendRequests = receiver.friendRequests.filter(id => !id.equals(sender._id));
-            sender.sentRequests = sender.sentRequests.filter(id => !id.equals(receiver._id));
-
-            receiver.friends.push(sender._id);
-            sender.friends.push(receiver._id);
-
-            await receiver.save();
-            await sender.save();
-
-            return res.status(200).json({ message: "Friend request accepted." });
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
+            res.json({
+                status: true,
+                message: 'Friend request accepted.',
+                data: data,
+            });
+        } catch (err:any) {
+            res.status(422).json({
+                status: false,
+                message: err.message
+            });
         }
     }
 
-    // async cancelRequest(req: Request, res: Response) {
-    //     try {
-    //         const currentUserId = req.user._id;
-    //         const { otherUserId } = req.body;
+    async cancelRequest(req: Request, res:Response) {
+        try {
+            // Remove the sent request from the sender
+            const userReq = req as AuthenticatedRequest;
+            await User.findByIdAndUpdate(userReq.user._id, {
+                $pull: {
+                    sentRequests: userReq.body.receiverId
+                }
+            });
 
-    //         const currentUser = await User.findById(currentUserId);
-    //         const otherUser = await User.findById(otherUserId);
+            // Remove the friend request from the receiver
+            await User.findByIdAndUpdate(userReq.body.receiverId, {
+                $pull: {
+                    receivedRequests: userReq.user._id
+                }
+            });
 
-    //         if (!currentUser || !otherUser) {
-    //             return res.status(404).json({ message: "User not found." });
-    //         }
+            let data = await User.findById(userReq.body.receiverId);
 
-    //         currentUser.sentRequests = currentUser.sentRequests.filter(id => !id.equals(otherUser._id));
-    //         currentUser.friendRequests = currentUser.friendRequests.filter(id => !id.equals(otherUser._id));
-    //         otherUser.sentRequests = otherUser.sentRequests.filter(id => !id.equals(currentUser._id));
-    //         otherUser.friendRequests = otherUser.friendRequests.filter(id => !id.equals(currentUser._id));
-
-    //         await currentUser.save();
-    //         await otherUser.save();
-
-    //         return res.status(200).json({ message: "Friend request cancelled or rejected." });
-    //     } catch (error: any) {
-    //         return res.status(500).json({ message: error.message });
-    //     }
-    // }
+            res.json({
+                status: true,
+                message: 'Friend request cancelled.',
+                data: data,
+            });
+        } catch (err:any) {
+            res.status(400).json({
+                status: false,
+                message: err.message
+            });
+        }
+    }
 
     // async removeFriend(req: Request, res: Response) {
     //     try {

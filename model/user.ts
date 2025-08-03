@@ -16,7 +16,7 @@ export interface IUser extends Document {
     password: string;
 	tokens: IToken[];
 	friends: mongoose.Types.ObjectId[];
-	friendRequests: mongoose.Types.ObjectId[];
+	receivedRequests: mongoose.Types.ObjectId[];
 	sentRequests: mongoose.Types.ObjectId[];
 	status: string;
 	createdAt: Date;
@@ -38,7 +38,7 @@ const UserSchema = new Schema<IUser>(
 		password: { type: String, required: true },
 		tokens: [TokenSchema],
 		friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-		friendRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+		receivedRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 		sentRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 		status: { type: String, default: '' },
 	},
