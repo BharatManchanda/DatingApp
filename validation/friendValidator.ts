@@ -104,4 +104,28 @@ export const cancelRequestValidator = [
 		}),
 ];
 
+export const removeRequestValidator = [
+	body("friendId")
+		.notEmpty()
+		.withMessage("Friend id is required")
+		.custom(async (friendId: string, { req }: { req: AuthenticatedRequest }) => {
+			if (!mongoose.Types.ObjectId.isValid(friendId)) {
+				throw new Error("Invalid friend id format");
+			}
+
+			const currentUser = await User.findById(req.user._id);
+			if (!currentUser) {
+				return Promise.reject("Current user not found.");
+			}
+			const friendObjectId = new mongoose.Types.ObjectId(friendId);
+
+			const hasFriend = currentUser.friends?.includes(friendObjectId);
+
+			if (!hasFriend) {
+				return Promise.reject("No friend found to remove.");
+			}
+			return true
+		})
+];
+
 
